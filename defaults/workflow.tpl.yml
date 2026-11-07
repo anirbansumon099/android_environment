@@ -1,0 +1,146 @@
+name: Android Build
+run-name: Build ${{ inputs.build_id }} (${{ inputs.build_type }})
+
+# No source code lives on GitHub: the whole project (with its keystore) arrives as one zip on a temporary branch,
+# the runner extracts and builds it, and everything is deleted afterwards.
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build id (server generated)"
+        required: true
+        type: string
+      build_type:
+        description: "debug | release | bundle"
+        required: false
+        default: release
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: [[TIMEOUT]]
+    steps:
+      - name: Checkout source package
+        uses: actions/checkout@v4
+        with:
+          ref: build-${{ inputs.build_id }}
+
+      - name: Extract project
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          mkdir -p project
+          unzip -q "sources/$BUILD_ID.zip" -d project
+          rm -rf sources
+          SETTINGS=$(find project -maxdepth 3 \( -name settings.gradle -o -name settings.gradle.kts \) | head -n1)
+          if [ -z "$SETTINGS" ]; then echo "settings.gradle not found"; exit 1; fi
+          echo "ROOT=$(cd "$(dirname "$SETTINGS")" && pwd)" >> "$GITHUB_ENV"
+
+      # Web apps (e.g. exported from Google AI Studio): build webapp/ with Node and bundle the result into the APK
+      - name: Build web app (if the project has webapp/)
+        run: |
+          WA=$(find project -maxdepth 3 -path '*/webapp/package.json' | head -n1)
+          if [ -z "$WA" ]; then
+            WI=$(find project -maxdepth 3 -path '*/webapp/index.html' | head -n1)
+            if [ -z "$WI" ]; then echo "No webapp/ folder - skipping"; exit 0; fi
+            OUT_DIR="$(cd "$(dirname "$WI")" && pwd)"
+          else
+            cd "$(dirname "$WA")"
+            echo "Node $(node -v), npm $(npm -v)"
+            npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+            if grep -q '"vite"' package.json; then npm run build -- --base=./; else npm run build; fi
+            if [ -d dist ]; then OUT_DIR="$PWD/dist"; elif [ -d build ]; then OUT_DIR="$PWD/build"; else echo "::error::The web build produced no dist/ or build/ folder"; exit 1; fi
+          fi
+          ASSETS="$ROOT/app/src/main/assets"
+          rm -rf "$ASSETS"; mkdir -p "$ASSETS"; cp -R "$OUT_DIR"/. "$ASSETS"/
+          echo "Web app copied into Android assets: $(ls "$ASSETS" | wc -l) entries"
+
+      # for release/bundle, verify the keystore before building (a wrong key fails fast)
+      - name: Verify signing key
+        env:
+          BT: ${{ inputs.build_type }}
+        run: |
+          [ "$BT" = "debug" ] && exit 0
+          KP=$(find project -maxdepth 4 -path '*/keystore/keystore.properties' | head -n1)
+          if [ -z "$KP" ]; then echo "no keystore - the build will be signed with a temporary test key"; exit 0; fi
+          prop() { grep -m1 "^$1=" "$KP" | cut -d= -f2-; }
+          KS="$(dirname "$KP")/$(prop storeFile)"; SP="$(prop storePassword)"; AL="$(prop keyAlias)"; KPW="$(prop keyPassword)"
+          [ -f "$KS" ] || { echo "::error::keystore file not found: $(prop storeFile)"; exit 1; }
+          export SP KPW
+          keytool -list -keystore "$KS" -storepass:env SP -alias "$AL" > /dev/null || { echo "::error::wrong keystore, alias or password"; exit 1; }
+          keytool -certreq -alias "$AL" -keystore "$KS" -storepass:env SP -keypass:env KPW -file "$RUNNER_TEMP/v.csr" > /dev/null || { echo "::error::wrong key password"; exit 1; }
+          echo "keystore OK (alias: $AL)"
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "[[JDK]]"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "[[GRADLE]]"
+          cache-disabled: true
+
+      - name: Build
+        env:
+          BT: ${{ inputs.build_type }}
+        run: |
+          case "$BT" in
+            debug)  TASK="[[TASK_DEBUG]]" ;;
+            bundle) TASK="[[TASK_BUNDLE]]" ;;
+            *)      TASK="[[TASK_RELEASE]]" ;;
+          esac
+          cd "$ROOT"
+          if [ -f gradlew ]; then chmod +x gradlew; ./gradlew $TASK --no-daemon --stacktrace
+          else gradle $TASK --no-daemon --stacktrace; fi
+
+      - name: Collect and sign
+        env:
+          BT: ${{ inputs.build_type }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS_SECRET: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD_SECRET: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -e
+          OUT="$GITHUB_WORKSPACE/out"; mkdir -p "$OUT"
+          BTD="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)"
+          if [ "$BT" = "debug" ]; then
+            F=$(find "$ROOT" -path '*/build/outputs/apk/debug/*.apk' | head -n1)
+            [ -n "$F" ] || { echo "Debug APK not found"; exit 1; }
+            cp "$F" "$OUT/app-debug.apk"; exit 0
+          fi
+          # keystore priority: 1) the project's own keystore/  2) the admin's GitHub secret  3) a temporary test key
+          SUFFIX=""
+          KP=$(find project -maxdepth 4 -path '*/keystore/keystore.properties' | head -n1)
+          if [ -n "$KP" ]; then
+            prop() { grep -m1 "^$1=" "$KP" | cut -d= -f2-; }
+            KS="$(dirname "$KP")/$(prop storeFile)"; KS_PASS="$(prop storePassword)"; KEY_ALIAS="$(prop keyAlias)"; KEY_PASS="$(prop keyPassword)"; KEY_PASS="${KEY_PASS:-$KS_PASS}"
+          elif [ -n "$KEYSTORE_BASE64" ]; then
+            KS="$RUNNER_TEMP/ks.jks"; echo "$KEYSTORE_BASE64" | base64 -d > "$KS"
+            KS_PASS="$KEYSTORE_PASSWORD"; KEY_ALIAS="$KEY_ALIAS_SECRET"; KEY_PASS="${KEY_PASSWORD_SECRET:-$KEYSTORE_PASSWORD}"
+          else
+            KS="$RUNNER_TEMP/test.jks"; KS_PASS=android; KEY_ALIAS=test; KEY_PASS=android; SUFFIX="-testsigned"
+            keytool -genkeypair -keystore "$KS" -storepass android -keypass android -alias test -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Test,O=Test,C=US"
+          fi
+          if [ "$BT" = "bundle" ]; then
+            F=$(find "$ROOT" -path '*/build/outputs/bundle/release/*.aab' | head -n1)
+            [ -n "$F" ] || { echo "AAB not found"; exit 1; }
+            cp "$F" "$OUT/app-release$SUFFIX.aab"
+            jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore "$KS" -storepass "$KS_PASS" -keypass "$KEY_PASS" "$OUT/app-release$SUFFIX.aab" "$KEY_ALIAS"
+          else
+            F=$(find "$ROOT" -path '*/build/outputs/apk/release/*.apk' | head -n1)
+            [ -n "$F" ] || { echo "Release APK not found"; exit 1; }
+            "$BTD/zipalign" -p -f 4 "$F" "$RUNNER_TEMP/aligned.apk"
+            "$BTD/apksigner" sign --ks "$KS" --ks-pass pass:"$KS_PASS" --ks-key-alias "$KEY_ALIAS" --key-pass pass:"$KEY_PASS" --out "$OUT/app-release$SUFFIX.apk" "$RUNNER_TEMP/aligned.apk"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build
+          path: out/*
+          retention-days: [[RETENTION]]

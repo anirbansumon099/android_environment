@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.__THEME_NAME__" parent="Theme.AppCompat.Light.NoActionBar" />
+</resources>

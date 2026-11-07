@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Console — Android Builder</title>
+<link rel="stylesheet" href="/common.css"><link rel="stylesheet" href="/cms.css"></head>
+<body class="cms">
+<div id="app">
+  <aside id="side">
+    <div class="brand"><div class="lg"></div><div><span>Android Builder</span><small>ADMIN CONSOLE</small></div></div>
+    <nav id="nav"></nav>
+    <div class="sfoot">v2.1 · Multi-account routing<br>GitHub Actions build farm</div>
+  </aside>
+  <div id="main">
+    <header id="top">
+      <button class="iconbtn" id="t-menu" title="Toggle sidebar"></button>
+      <div class="crumb" id="crumb"></div>
+      <div class="search"><span id="t-sico"></span><input id="gsearch" placeholder="Search builds, users, projects…"></div>
+      <div class="grow"></div>
+      <a href="/" target="_blank" class="s" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12.5px">Open IDE ↗</a>
+      <button class="iconbtn" id="t-theme" title="Theme"></button>
+      <div style="position:relative"><button class="iconbtn" id="t-bell" title="Notifications"></button><div id="ntf" class="ntf" hidden></div></div>
+      <div class="me" id="t-me"><div class="avatar">A</div><div class="n"><b>admin</b><small>Administrator</small></div></div>
+    </header>
+    <div id="content"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="/common.js"></script><script src="/editor.js"></script><script src="/tree.js"></script>
+<script>
+Theme.init('cms-theme', 'light');
+Object.assign(P, {
+  dash: 'M3 13h8V3H3zm0 8h8v-6H3zm10 0h8V11h-8zm0-18v6h8V3z', users: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+  github: 'M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.15-1.11-1.46-1.11-1.46-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.9.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z',
+  workflow: 'M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm13 0h2v3h3v2h-3v3h-2v-3h-3v-2h3z', search: 'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+  bell: 'M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1z', menu: 'M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z', check: 'M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z', more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', bolt: 'M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z' });
+$('#t-menu').innerHTML = ic('menu'); $('#t-sico').innerHTML = ic('search'); $('.brand .lg').innerHTML = ic('android');
+
+const NAV = [['OVERVIEW', [['dash', 'Dashboard', 'dash']]], ['BUILD', [['builds', 'Builds', 'build'], ['accounts', 'GitHub Accounts', 'github'], ['workflow', 'Workflow', 'workflow'], ['template', 'Project Template', 'folder'], ['actions', 'Actions Cleanup', 'trash']]], ['PEOPLE', [['users', 'Users', 'users']]], ['SYSTEM', [['settings', 'Settings', 'gear'], ['secrets', 'Secrets', 'key']]]];
+const TITLES = Object.fromEntries(NAV.flatMap(([, i]) => i.map(([k, l]) => [k, l])));
+let page = 'dash', DATA = { users: [], accs: [] }, PG = {};
+const ago = (t) => { const s = (Date.now() - t) / 1000; return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)} min ago` : s < 86400 ? `${Math.floor(s / 3600)} h ago` : `${Math.floor(s / 86400)} d ago`; };
+const initials = (n) => String(n || '?').slice(0, 2).toUpperCase();
+const bcls = { ok: 'b-ok', er: 'b-er', wn: 'b-wn' };
+const sbadge = (b) => { const [l, c] = stageOf(b); const run = ['running', 'saving', 'cleaning', 'pushing', 'waiting'].includes(b.stage); return `<span class="bd2 ${run ? 'b-in' : bcls[c] || 'b-gr'}">${esc(l)}</span>`; };
+const sw = (id, on) => `<label class="sw"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><i></i></label>`;
+const field = (id, label, v, type = 'text', hint = '') => `<div><label for="${id}">${label}</label><input id="${id}" type="${type}" value="${esc(v)}">${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
+const val = (id) => $('#' + id).value;
+const stat = (cls, icon, v, l, d = '') => `<div class="stat"><div class="ic ${cls}">${ic(icon)}</div><div><div class="v">${v}</div><div class="l">${l}</div>${d ? `<div class="d mu">${d}</div>` : ''}</div></div>`;
+const pct = (a) => Math.min(100, a.used / a.limitMinutes * 100);
+const barc = (p) => p >= 90 ? 'var(--er)' : p >= 70 ? 'var(--wn)' : 'var(--ok)';
+const accStatus = (a) => !a.enabled ? '<span class="bd2 b-gr">Disabled</span>' : a.status === 'ok' ? '<span class="bd2 b-ok">Active</span>' : '<span class="bd2 b-er">Problem</span>';
+const emptyBox = (ico, t, s = '') => `<div class="empty"><div class="big">${ico}</div><b>${t}</b><div>${s}</div></div>`;
+const noAccBox = () => `<div class="panel"><div class="bd">${emptyBox('🐙', 'No GitHub account connected', 'Connect an account on the GitHub Accounts page')}</div></div>`;
+
+// ---------------- shell ----------------
+function drawNav() {
+  const bad = DATA.accs.filter((a) => a.enabled && a.status === 'error').length, act = BuildStore.list.filter((b) => !FINALS.includes(b.stage)).length;
+  $('#nav').innerHTML = NAV.map(([sec, items]) => `<div class="sec">${sec}</div>${items.map(([k, l, i]) => `<div class="ni ${page === k ? 'on' : ''}" data-k="${k}">${ic(i)}<span class="nl">${l}</span>${k === 'accounts' && bad ? `<span class="cnt er">${bad}</span>` : ''}${k === 'builds' && act ? `<span class="cnt">${act}</span>` : ''}</div>`).join('')}`).join('');
+  $('#crumb').innerHTML = `Admin <span class="mu">/</span> <b>${TITLES[page]}</b>`;
+  $('#t-theme').innerHTML = ic(Theme.get() === 'dark' ? 'sun' : 'moon');
+  $('#t-bell').innerHTML = ic('bell') + (notifs().length ? `<span class="dotb">${notifs().length}</span>` : '');
+}
+$('#nav').onclick = (e) => { const n = e.target.closest('.ni'); if (n) go(n.dataset.k); };
+$('#t-menu').onclick = () => $('#side').classList.toggle('mini');
+$('#t-theme').onclick = () => { Theme.toggle(); drawNav(); };
+$('#t-me').onclick = (e) => { const r = e.currentTarget.getBoundingClientRect(); popup(r.right - 190, r.bottom + 6, [{ label: 'Open IDE', action: () => window.open('/', '_blank') }, { label: Theme.get() === 'dark' ? 'Light theme' : 'Dark theme', action: () => Theme.toggle() }, { sep: 1 }, { label: 'Sign out', action: () => logout() }]); };
+function notifs() {
+  const n = []; for (const a of DATA.accs) { if (a.enabled && a.status === 'error') n.push(['er', `${a.label}: ${a.statusMsg || 'problem'}`]); else if (a.enabled && pct(a) >= 90) n.push(['wn', `${a.label}: ${Math.round(pct(a))}% of the monthly limit used`]); }
+  const day = Date.now() - 86400e3; for (const b of BuildStore.list.filter((x) => ['failed', 'error'].includes(x.stage) && x.createdAt > day).slice(0, 4)) n.push(['er', `Build #${b.id} (${b.ownerName}/${b.project}) failed`]);
+  return n;
+}
+$('#t-bell').onclick = (e) => { e.stopPropagation(); const d = $('#ntf'); d.hidden = !d.hidden; const n = notifs(); d.innerHTML = `<div class="it" style="font-weight:600">Notifications</div>${n.map(([c, t]) => `<div class="it"><span class="${c}">●</span><span>${esc(t)}</span></div>`).join('') || '<div class="it mu">All good ✔</div>'}`; };
+document.addEventListener('click', () => { $('#ntf').hidden = true; });
+$('#gsearch').oninput = (e) => PG.search?.(e.target.value);
+$('#gsearch').onkeydown = (e) => { if (e.key === 'Enter' && !PG.search) { PG.q = e.target.value; go('builds'); } };
+
+function go(p) { if (PG.E?.dirtyAny && !confirm('The template has unsaved changes. Leave anyway?')) return; location.hash = '#/' + p; }
+async function route() {
+  const p = (location.hash.match(/#\/(\w+)/) || [])[1] || 'dash'; if (!TITLES[p]) return go('dash');
+  PG.cleanup?.(); closeDrawer(); PG = { q: PG.q, acc: PG.acc }; page = p; drawNav(); $('#gsearch').value = ''; $('#content').innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  try { await PAGES[p](); } catch (e) { $('#content').innerHTML = `<div class="panel"><div class="bd">${emptyBox('⚠️', 'Could not load this page', esc(e.message))}</div></div>`; }
+}
+window.addEventListener('hashchange', route);
+const header = (title, sub, actions = '') => `<div class="ph"><div><h1>${title}</h1><div class="sub">${sub}</div></div><div class="grow"></div>${actions}</div>`;
+const refreshData = async () => { [DATA.accs, DATA.users] = await Promise.all([api('/api/admin/accounts'), api('/api/admin/users')]); drawNav(); };
+
+// ---------------- Build drawer ----------------
+let logs = {};
+function openDrawer(id) { PG.drawer = id; BuildStore.select(id); drawDrawer(); }
+function closeDrawer() { PG.drawer = null; $('#dbg')?.remove(); }
+function drawDrawer() {
+  const b = BuildStore.list.find((x) => x.id === PG.drawer); if (!b) return;
+  let bg = $('#dbg'); if (!bg) { bg = document.createElement('div'); bg.id = 'dbg'; bg.className = 'dbg'; document.body.appendChild(bg); bg.onmousedown = (e) => { if (e.target === bg) closeDrawer(); }; }
+  const fin = FINALS.includes(b.stage), steps = (BuildStore.jobs[b.id] || [])[0]?.steps || [], outs = outputsOf(b);
+  if (fin && logs[b.id] === undefined) { logs[b.id] = null; BuildStore.log(b.id).then((t) => { logs[b.id] = t || '(no log)'; if (PG.drawer === b.id) drawDrawer(); }).catch(() => logs[b.id] = '(log unavailable)'); }
+  const keep = bg.querySelector('.drawer')?.scrollTop || 0;
+  bg.innerHTML = `<div class="drawer"><div class="dh"><div class="avatar sm">${initials(b.ownerName)}</div><h3>Build #${b.id}</h3>${sbadge(b)}<button class="iconbtn" id="dx">${ic('close')}</button></div><div class="db">
+    ${pipelineHtml(b, steps)}
+    <div class="kv"><span class="k">Project</span><span><b>${esc(b.ownerName)}</b> / ${esc(b.project)}</span><span class="k">Type</span><span><span class="tag">${esc(b.type || 'release')}</span> ${SIGN[b.signing] ? `<span class="tag ${SIGN[b.signing][1]}">${SIGN[b.signing][0]}</span>` : ''}</span>
+    <span class="k">GitHub account</span><span>${b.accountLabel ? '🐙 ' + esc(b.accountLabel) : '—'}</span><span class="k">Started</span><span>${new Date(b.createdAt).toLocaleString()} <span class="mu">(${ago(b.createdAt)})</span></span>
+    <span class="k">Duration</span><span>${fmtDur(elapsed(b))}${b.minutes ? ` · ${b.minutes} billed min` : ''}</span><span class="k">Source zip</span><span>${b.zipSize ? fmtSize(b.zipSize) : '—'}</span>${b.message ? `<span class="k">Note</span><span>${esc(b.message)}</span>` : ''}${b.runUrl ? `<span class="k">Run</span><span><code>${esc(b.runUrl)}</code></span>` : ''}</div>
+    ${b.note ? `<div class="err-list">${esc(b.note)}</div>` : ''}
+    <div class="row" style="margin:12px 0">${!fin ? '<button class="d xs" id="dcancel">Cancel build</button>' : '<button class="s xs" id="drm">Remove from server</button>'}${outs.map((f) => `<a class="bd2 b-ok" href="/download/${b.id}/${encodeURIComponent(f)}?t=${TOKEN}">⬇ ${esc(f)} · ${fmtSize(b.sizes?.[f])}</a>`).join('')}</div>
+    <h4 style="margin:18px 0 8px">Steps</h4><div class="timeline">${steps.length ? steps.map((s) => `<div class="st ${s.status === 'completed' ? (s.conclusion === 'success' ? 'ok' : s.conclusion === 'skipped' ? '' : 'bad') : s.status === 'in_progress' ? 'run' : ''}">${stepIcon(s)}<span>${esc(s.name)}</span><span class="mu" style="margin-left:auto">${stepDur(s)}</span></div>`).join('') : '<div class="mu">No step information</div>'}</div>
+    <h4 style="margin:18px 0 8px">Log</h4><pre style="max-height:320px">${esc(fin ? (logs[b.id] ?? 'Loading…') : (BuildStore.live[b.id] || 'Build is running — the full log is available when it finishes'))}</pre></div></div>`;
+  bg.querySelector('.drawer').scrollTop = keep;
+  $('#dx').onclick = closeDrawer;
+  $('#dcancel') && ($('#dcancel').onclick = guard(async () => { await api(`/api/builds/${b.id}/cancel`, 'POST'); toast('Cancel requested'); }));
+  $('#drm') && ($('#drm').onclick = guard(async () => { if (!confirm('Remove this build’s files from the server?')) return; await api(`/api/builds/${b.id}`, 'DELETE'); closeDrawer(); BuildStore.refresh(); }));
+}
+BuildStore.on(() => { drawNav(); if (PG.drawer) drawDrawer(); PG.onBuilds?.(); });
+
+// ---------------- Pages ----------------
+const PAGES = {
+  async dash() {
+    await refreshData(); await BuildStore.refresh();
+    const draw = () => {
+      const L = BuildStore.list, A = DATA.accs, today = L.filter((b) => new Date(b.createdAt).toDateString() === new Date().toDateString()), fin = L.filter((b) => FINALS.includes(b.stage)), okc = fin.filter((b) => b.stage === 'done').length;
+      const run = L.filter((b) => !FINALS.includes(b.stage) && b.stage !== 'queued'), q = L.filter((b) => b.stage === 'queued'), rem = A.filter((a) => a.enabled).reduce((s, a) => s + a.remaining, 0), lim = A.filter((a) => a.enabled).reduce((s, a) => s + a.limitMinutes, 0);
+      const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (6 - i)); const s = d.getTime(), e = s + 86400e3, x = L.filter((b) => b.createdAt >= s && b.createdAt < e); return { l: d.toLocaleDateString('en', { weekday: 'short' }), ok: x.filter((b) => b.stage === 'done').length, bad: x.filter((b) => ['failed', 'error'].includes(b.stage)).length, oth: x.filter((b) => !FINALS.includes(b.stage)).length }; });
+      const mx = Math.max(1, ...days.map((d) => d.ok + d.bad + d.oth)), H = 140;
+      $('#content').innerHTML = header('Dashboard', 'Overview of the build farm — all users and GitHub accounts', `<button class="s" id="dref">${ic('refresh').replace('<svg', '<svg style="width:14px;height:14px;fill:currentColor;vertical-align:-2px"')} Refresh</button><button class="p" id="dnew">＋ Connect GitHub account</button>`) +
+        `<div class="grid g4" style="margin-bottom:18px">${stat('c-in', 'build', today.length, 'Builds today', `${L.length} total`)}${stat('c-ok', 'check', fin.length ? Math.round(okc / fin.length * 100) + '%' : '—', 'Success rate', `${okc} / ${fin.length} finished`)}${stat('c-sk', 'bolt', run.length, 'Running now', `${q.length} queued`)}${stat('c-pk', 'users', DATA.users.length, 'Users', `${DATA.users.filter((u) => !u.disabled).length} active`)}${stat(rem / (lim || 1) < .15 ? 'c-er' : 'c-wn', 'github', lim ? Math.round(rem / lim * 100) + '%' : '—', 'GitHub capacity', `${rem} / ${lim} min left`)}</div>
+        <div class="grid g32" style="margin-bottom:18px"><div class="panel"><div class="hd"><h3>Build activity — last 7 days</h3></div><div class="bd"><div class="chart">${days.map((d) => { const t = d.ok + d.bad + d.oth; return `<div class="col"><div class="n">${t || ''}</div><div class="bars" style="height:${Math.max(3, t / mx * H)}px;flex:none;align-self:center">${d.oth ? `<i style="flex:${d.oth};background:var(--info)"></i>` : ''}${d.bad ? `<i style="flex:${d.bad};background:var(--er)"></i>` : ''}${d.ok ? `<i style="flex:${d.ok};background:var(--ok)"></i>` : ''}</div><div class="lb">${d.l}</div></div>`; }).join('')}</div>
+          <div class="legend"><span><i style="background:var(--ok)"></i>Succeeded</span><span><i style="background:var(--er)"></i>Failed</span><span><i style="background:var(--info)"></i>Running / queued</span></div></div></div>
+        <div class="panel"><div class="hd"><h3>GitHub accounts</h3><a href="#/accounts" style="font-size:12px">View all →</a></div><div class="bd" style="padding:6px 18px">${A.map((a) => `<div class="accrow"><div class="gh">${ic('github')}</div><div class="grow"><b>${esc(a.label)}</b> <span class="mu">@${esc(a.login)}</span><div class="bar"><i style="width:${pct(a)}%;background:${barc(pct(a))}"></i></div><span class="mu">${a.used}/${a.limitMinutes} min · running ${a.active}/${a.maxConcurrent}</span></div>${accStatus(a)}</div>`).join('') || emptyBox('🐙', 'No accounts')}</div></div></div>
+        <div class="panel"><div class="hd"><h3>Recent builds</h3><a href="#/builds" style="font-size:12px">View all →</a></div><div class="bd np">${buildsTable(L.slice(0, 7))}</div></div>`;
+      $('#dref').onclick = guard(async () => { await refreshData(); await BuildStore.refresh(); toast('Refreshed'); }); $('#dnew').onclick = () => { location.hash = '#/accounts'; setTimeout(connectModal, 150); };
+      bindRows();
+    };
+    PG.onBuilds = draw; draw();
+  },
+
+  async builds() {
+    await refreshData(); await BuildStore.refresh(); Object.assign(PG, { f: { q: PG.q || '', st: '', ty: '', us: '' }, pg: 1 }); PG.q = '';
+    $('#content').innerHTML = header('Builds', 'All users’ builds — filter, inspect and download') + `<div class="panel"><div class="tools"><input id="fq" placeholder="ID / project / user / note" value="${esc(PG.f.q)}"><select id="fs"><option value="">All statuses</option><option value="done">Succeeded</option><option value="failed">Failed</option><option value="active">Running</option><option value="queued">Queued</option><option value="error">Error</option></select><select id="ft"><option value="">All types</option><option>debug</option><option>release</option><option>bundle</option></select><select id="fu"><option value="">All users</option>${[...new Set(BuildStore.list.map((b) => b.ownerName))].map((u) => `<option>${esc(u)}</option>`).join('')}</select><div class="grow"></div><span class="mu" id="fc"></span></div><div class="bd np" id="bt"></div><div class="pager" id="bp"></div></div>`;
+    const apply = () => { const f = PG.f; return BuildStore.list.filter((b) => (!f.q || [b.id, b.project, b.ownerName, b.message].join(' ').toLowerCase().includes(f.q.toLowerCase())) && (!f.st || (f.st === 'active' ? !FINALS.includes(b.stage) && b.stage !== 'queued' : f.st === 'error' ? b.stage === 'error' : b.stage === f.st)) && (!f.ty || b.type === f.ty) && (!f.us || b.ownerName === f.us)); };
+    const draw = () => { const rows = apply(), per = 10, pages = Math.max(1, Math.ceil(rows.length / per)); PG.pg = Math.min(PG.pg, pages); $('#bt').innerHTML = buildsTable(rows.slice((PG.pg - 1) * per, PG.pg * per), true); $('#fc').textContent = `${rows.length} build(s)`; $('#bp').innerHTML = `<span>Page ${PG.pg} / ${pages}</span><div class="grow"></div><button class="s xs" id="pp" ${PG.pg <= 1 ? 'disabled' : ''}>‹ Previous</button><button class="s xs" id="pn" ${PG.pg >= pages ? 'disabled' : ''}>Next ›</button>`; $('#pp').onclick = () => { PG.pg--; draw(); }; $('#pn').onclick = () => { PG.pg++; draw(); }; bindRows(); };
+    $('#fq').oninput = (e) => { PG.f.q = e.target.value; PG.pg = 1; draw(); }; $('#fs').onchange = (e) => { PG.f.st = e.target.value; PG.pg = 1; draw(); }; $('#ft').onchange = (e) => { PG.f.ty = e.target.value; PG.pg = 1; draw(); }; $('#fu').onchange = (e) => { PG.f.us = e.target.value; PG.pg = 1; draw(); };
+    PG.search = (v) => { PG.f.q = v; $('#fq').value = v; PG.pg = 1; draw(); }; PG.onBuilds = draw; draw();
+  },
+
+  async accounts() {
+    await refreshData(); const A = DATA.accs;
+    $('#content').innerHTML = header('GitHub Accounts', 'Connect several accounts — builds are auto-routed and a private repo is created for each', '<button class="p" id="anew">＋ Connect account</button>') +
+      `<div class="grid g32"><div class="panel"><div class="bd np">${A.length ? `<table class="tbl"><thead><tr><th>Account</th><th>Repository</th><th>Monthly usage</th><th>Concurrency</th><th>Status</th><th>Enabled</th><th></th></tr></thead><tbody>${A.map((a) => `<tr><td><div class="row" style="margin:0"><div class="avatar sm">${initials(a.label)}</div><div><b>${esc(a.label)}</b><div class="mu">@${esc(a.login)}</div></div></div></td><td><code>${esc(a.repo)}</code><div>${a.repoPrivate ? '<span class="bd2 b-ok">private</span>' : '<span class="bd2 b-er">PUBLIC</span>'}</div></td><td style="min-width:170px"><div class="bar"><i style="width:${pct(a)}%;background:${barc(pct(a))}"></i></div><span class="mu">${a.used} / ${a.limitMinutes} min${a.billingMonth === a.month ? ' · GitHub billing ✔' : ''}</span></td><td>${a.active} / ${a.maxConcurrent}<div class="mu">${a.builds} total</div></td><td>${accStatus(a)}${a.status === 'error' ? `<div class="er" style="font-size:11px;max-width:200px">${esc(a.statusMsg)}</div>` : ''}</td><td>${sw('sw-' + a.id, a.enabled)}</td><td><button class="iconbtn" data-more="${a.id}">${ic('more')}</button></td></tr>`).join('')}</tbody></table>` : emptyBox('🐙', 'No accounts yet', 'Click “Connect account” to add one')}</div></div>
+      <div class="panel"><div class="hd"><h3>How auto-routing works</h3></div><div class="bd"><div style="display:grid;gap:12px"><div>① A build arrives → the account with the <b>most monthly minutes left</b> and the lowest load is picked</div><div>② If its limit or concurrency is full, the next account is used</div><div>③ On a 401/403/rate-limit the account is flagged “Problem” and the build moves to another one</div><div>④ Flagged accounts are re-checked automatically every 10 minutes</div><div>⑤ If every account is full, the build waits in the queue</div></div><hr><div class="mu">Tokens are stored encrypted (AES-256-GCM). Free plans include 2000 private-repo minutes per month, Pro 3000.</div></div></div></div>`;
+    $('#anew').onclick = connectModal;
+    A.forEach((a) => { const s = $('#sw-' + a.id); s && (s.onchange = guard(async () => { await api('/api/admin/accounts/' + a.id, 'PUT', { enabled: s.checked }); await refreshData(); toast(s.checked ? 'Enabled' : 'Disabled'); })); });
+    $$('[data-more]').forEach((b) => b.onclick = () => { const a = A.find((x) => x.id === b.dataset.more), r = b.getBoundingClientRect(), U = '/api/admin/accounts/' + a.id;
+      popup(r.right - 190, r.bottom + 4, [{ label: 'Verify + sync workflow', action: guard(async () => { toast('Verifying…'); await api(U + '/check', 'POST'); toast('✅ OK — repo is private, workflow synced'); PAGES.accounts(); }) }, { label: 'Change limits', action: guard(async () => { const l = prompt('Monthly limit (minutes)', a.limitMinutes); if (l === null) return; const c = prompt('Max concurrent builds', a.maxConcurrent); await api(U, 'PUT', { limitMinutes: l, maxConcurrent: c }); PAGES.accounts(); }) }, { label: 'Replace token', action: guard(async () => { const t = prompt('New token'); if (!t) return; await api(U, 'PUT', { token: t }); await api(U + '/check', 'POST'); toast('✅ Token updated'); PAGES.accounts(); }) }, { sep: 1 }, { label: 'Remove…', action: guard(async () => { if (!confirm(`Remove ${a.label}?`)) return; const del = confirm('Also delete the repository on GitHub? (OK = delete it, Cancel = only remove it from this list)'); await api(U + (del ? '?deleteRepo=1' : ''), 'DELETE'); PAGES.accounts(); }) }]); });
+  },
+
+  async users() {
+    await refreshData(); await BuildStore.refresh(); const U = DATA.users; PG.uq = '';
+    $('#content').innerHTML = header('Users', 'Manage user accounts and daily build limits', '<button class="p" id="unew">＋ Add user</button>') + `<div class="panel"><div class="tools"><input id="uq" placeholder="Find a user…"><div class="grow"></div><span class="mu">${U.length} user(s)</span></div><div class="bd np" id="ut"></div></div>`;
+    const draw = () => { const rows = U.filter((u) => u.username.toLowerCase().includes(PG.uq.toLowerCase())); $('#ut').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>User</th><th>Projects</th><th>Builds</th><th>Daily limit</th><th>Joined</th><th>Active</th><th></th></tr></thead><tbody>${rows.map((u) => `<tr><td><div class="row" style="margin:0"><div class="avatar">${initials(u.username)}</div><div><b>${esc(u.username)}</b><div class="mu">${u.disabled ? 'Disabled' : 'User'}</div></div></div></td><td>${u.projects}</td><td>${BuildStore.list.filter((b) => b.ownerId === u.id).length}</td><td>${u.maxPerDay ?? '<span class="mu">default</span>'}</td><td class="mu">${new Date(u.createdAt).toLocaleDateString()}</td><td>${sw('us-' + u.id, !u.disabled)}</td><td><button class="iconbtn" data-um="${u.id}">${ic('more')}</button></td></tr>`).join('')}</tbody></table>` : emptyBox('👥', 'No users');
+      rows.forEach((u) => { const s = $('#us-' + u.id); s && (s.onchange = guard(async () => { await api('/api/admin/users/' + u.id, 'PUT', { disabled: !s.checked }); await refreshData(); PAGES.users(); })); });
+      $$('[data-um]').forEach((b) => b.onclick = () => { const u = U.find((x) => x.id === b.dataset.um), r = b.getBoundingClientRect(), A = '/api/admin/users/' + u.id; popup(r.right - 190, r.bottom + 4, [{ label: 'Reset password', action: guard(async () => { const p = prompt('New password (min 6 characters)'); if (!p) return; await api(A, 'PUT', { password: p }); toast('Password changed'); }) }, { label: 'Daily build limit', action: guard(async () => { const p = prompt('Daily build limit (empty = default)', u.maxPerDay ?? ''); if (p === null) return; await api(A, 'PUT', { maxPerDay: p }); PAGES.users(); }) }, { sep: 1 }, { label: 'Delete user…', action: guard(async () => { if (!confirm(`Delete ${u.username} and all their projects?`)) return; await api(A, 'DELETE'); PAGES.users(); }) }]); }); };
+    $('#uq').oninput = (e) => { PG.uq = e.target.value; draw(); }; PG.search = (v) => { PG.uq = v; $('#uq').value = v; draw(); }; draw();
+    $('#unew').onclick = () => { const m = modal(`<h3>Add user</h3><div class="fg">${field('nu', 'Username', '', 'text', 'a-z, 0-9, _ . - (3–24 characters)')}${field('np', 'Password', '', 'password', 'At least 6 characters')}${field('nl', 'Daily build limit', '', 'number', 'Empty = default')}</div><div class="foot"><button class="s" id="mc">Cancel</button><button class="p" id="mk">Create user</button></div>`);
+      m.$('#mc').onclick = m.close; m.$('#mk').onclick = guard(async () => { await api('/api/admin/users', 'POST', { username: m.$('#nu').value, password: m.$('#np').value, maxPerDay: m.$('#nl').value }); m.close(); toast('✅ User created'); PAGES.users(); }); };
+  },
+
+  async workflow() {
+    const w = await api('/api/admin/workflow'); await refreshData();
+    $('#content').innerHTML = header('Workflow', 'GitHub Actions workflow template — shared by all accounts', `<span class="bd2 ${w.synced ? 'b-ok' : 'b-wn'}" id="wsy">${w.synced ? 'Synced to all accounts' : 'Sync pending (automatic on the next build)'}</span>`) +
+      `<div class="grid g32"><div class="panel"><div class="hd"><h3>build.yml template ${w.custom ? '<span class="bd2 b-in">custom</span>' : '<span class="bd2 b-gr">default</span>'}</h3><button class="s xs" id="wr">Reset to default</button><button class="s xs" id="wp">Preview</button><button class="s xs" id="wy">Sync to all accounts</button><button class="p" id="ws">Save</button></div><div class="bd"><div class="wfe" id="wfe"></div><div class="hint">Placeholders: [[JDK]] [[GRADLE]] [[TASK_DEBUG]] [[TASK_RELEASE]] [[TASK_BUNDLE]] [[RETENTION]] [[TIMEOUT]]</div></div></div>
+      <div><div class="panel"><div class="hd"><h3>Build pipeline</h3></div><div class="bd"><div class="pipe"><div class="n">📦<br>Project zip<br><small class="mu">with keystore/</small></div><span class="a">→</span><div class="n">🔒<br>Private repo<br><small class="mu">build-&lt;id&gt; branch</small></div><span class="a">→</span><div class="n">⚙️<br>Runner<br><small class="mu">extract + build</small></div><span class="a">→</span><div class="n">💾<br>Saved here</div><span class="a">→</span><div class="n">🧹<br>Cleanup</div></div><div class="hint" style="margin-top:12px">No source code stays on GitHub; <code>main</code> only holds this workflow file. Web apps (<code>webapp/</code>) are built with Node on the runner.</div></div></div>
+      <div class="panel"><div class="hd"><h3>Rendered preview</h3></div><div class="bd np"><pre id="wv" style="max-height:380px;border-radius:0">${esc(w.rendered)}</pre></div></div></div></div>`;
+    await loadMonaco(); defineThemes(); const el = $('#wfe'), me = monaco.editor.create(el, { value: w.template, language: 'yaml', theme: monacoTheme(), minimap: { enabled: false }, automaticLayout: true, fontSize: 12.5, scrollBeyondLastLine: false, padding: { top: 8 } }); const tl = () => monaco.editor.setTheme(monacoTheme()); window.addEventListener('themechange', tl); PG.cleanup = () => { window.removeEventListener('themechange', tl); me.dispose(); };
+    const save = async () => { await api('/api/admin/workflow', 'PUT', { template: me.getValue() }); const n = await api('/api/admin/workflow'); $('#wv').textContent = n.rendered; $('#wsy').className = 'bd2 b-wn'; $('#wsy').textContent = 'Sync pending (automatic on the next build)'; };
+    $('#ws').onclick = guard(async () => { await save(); toast('✅ Saved'); }); $('#wp').onclick = guard(save);
+    $('#wy').onclick = guard(async () => { await save(); toast('Syncing…'); await api('/api/admin/workflow/sync', 'POST'); $('#wsy').className = 'bd2 b-ok'; $('#wsy').textContent = 'Synced to all accounts'; toast('✅ Pushed to all accounts'); });
+    $('#wr').onclick = guard(async () => { if (!confirm('Reset to the default template?')) return; await api('/api/admin/workflow/reset', 'POST'); PAGES.workflow(); });
+  },
+
+  async template() {
+    $('#content').innerHTML = header('Project Template', 'The files a new “Empty Views Activity” project starts with', '<button class="s" id="ts">💾 Save All</button><button class="s" id="tn">＋ New file</button><button class="s" id="tu">⬆ Upload</button><button class="d" id="tr">Reset to default</button>') +
+      `<div class="ide"><div class="tw"><div class="t">Template files<span class="grow"></span></div><div id="tree" tabindex="0"></div></div><div class="ed" id="edz"></div></div><div class="hint" style="margin-top:8px">Placeholders: <code>__PACKAGE__</code> <code>__PKG_PATH__</code> <code>__APP_NAME__</code> <code>__MIN_SDK__</code> <code>__THEME_NAME__</code></div>`;
+    const E = CodeEditor({ ed: $('#edz') }); const T = FileTree($('#tree'), E, { mode: 'project' }); PG.E = E; await E.setBase('/api/p/_tpl/default');
+    $('#ts').onclick = () => E.saveAll(); $('#tn').onclick = () => E.newFile(); $('#tu').onclick = () => E.upload();
+    $('#tr').onclick = guard(async () => { if (!confirm('Reset the template to the default?')) return; await api('/api/admin/template/reset', 'POST'); await E.setBase('/api/p/_tpl/default'); });
+  },
+
+  async actions() {
+    await refreshData(); if (!DATA.accs.length) { $('#content').innerHTML = header('Actions Cleanup', '') + noAccBox(); return; }
+    if (!PG.acc) PG.acc = DATA.accs[0].id; const sel = `<select id="accsel" style="width:auto">${DATA.accs.map((a) => `<option value="${a.id}" ${a.id === PG.acc ? 'selected' : ''}>${esc(a.label)} (@${esc(a.login)})</option>`).join('')}</select>`;
+    $('#content').innerHTML = header('Actions Cleanup', 'Runs, artifacts, caches and branches stored on GitHub — inspect and delete', `${sel}<button class="d" id="ac_sweep">🧹 Clean this account</button><button class="d" id="ac_all">🧹 Clean all accounts</button>`) + '<div id="acbody"><div class="empty"><span class="spin"></span></div></div>';
+    const load = async () => {
+      const d = await api('/api/admin/actions?account=' + PG.acc), st = await api('/api/admin/storage?account=' + PG.acc).catch(() => null), tot = d.artifacts.reduce((s, a) => s + a.size, 0) + d.caches.reduce((s, c) => s + c.size, 0);
+      PG.tab ||= 'runs'; const tabs = [['runs', 'Workflow runs', d.runs.length], ['artifacts', 'Artifacts', d.artifacts.length], ['caches', 'Caches', d.caches.length], ['branches', 'Build branches', d.branches.length]];
+      const rows = { runs: d.runs.map((r) => [r.id, `<b>${esc(String(r.title).replace(/^Build /, '#'))}</b>`, r.status !== 'completed' ? `<span class="bd2 b-in">${esc(r.status)}</span>` : `<span class="bd2 ${r.conclusion === 'success' ? 'b-ok' : 'b-er'}">${esc(r.conclusion)}</span>`, new Date(r.createdAt).toLocaleString()]), artifacts: d.artifacts.map((a) => [a.id, `<b>${esc(a.name)}</b>`, fmtSize(a.size), a.expired ? '<span class="bd2 b-gr">expired</span>' : '']), caches: d.caches.map((c) => [c.id, `<code>${esc(c.key.slice(0, 40))}</code>`, fmtSize(c.size), '']), branches: d.branches.map((b) => [b, `<code>${esc(b)}</code>`, '', '']) }[PG.tab];
+      $('#acbody').innerHTML = `<div class="grid g4" style="margin-bottom:18px">${stat('c-in', 'folder', fmtSize(tot), 'Total usage', st ? `limit ${fmtSize(st.limit)}` : '')}${stat('c-sk', 'workflow', d.runs.length, 'Runs')}${stat('c-wn', 'download', d.artifacts.length, 'Artifacts', fmtSize(d.artifacts.reduce((s, a) => s + a.size, 0)))}${stat('c-pk', 'bolt', d.caches.length + d.branches.length, 'Caches + branches')}</div>
+        <div class="panel"><div class="tabs-h">${tabs.map(([k, l, n]) => `<button data-t="${k}" class="${PG.tab === k ? 'on' : ''}">${l} (${n})</button>`).join('')}<div class="grow"></div><button class="d xs" id="ac_del" style="align-self:center">✕ Delete selected</button></div>
+        <div class="bd np">${rows.length ? `<table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" id="ck_all"></th><th>Item</th><th>Info</th><th>Detail</th></tr></thead><tbody>${rows.map((r) => `<tr><td><input type="checkbox" class="ck" value="${esc(String(r[0]))}"></td><td>${r[1]}</td><td>${r[2]}</td><td class="mu">${r[3]}</td></tr>`).join('')}</tbody></table>` : emptyBox('✨', 'Nothing stored', 'This account is clean')}</div></div>`;
+      $$('.tabs-h [data-t]').forEach((b) => b.onclick = () => { PG.tab = b.dataset.t; load(); });
+      $('#ck_all') && ($('#ck_all').onchange = (e) => $$('.ck').forEach((c) => c.checked = e.target.checked));
+      $('#ac_del').onclick = guard(async () => { const ids = $$('.ck:checked').map((c) => c.value); if (!ids.length) return toast('Select something first'); if (!confirm(`Delete ${ids.length} item(s) from GitHub? (running runs are cancelled first)`)) return; toast('Deleting…'); const body = { account: PG.acc, runs: [], artifacts: [], caches: [], branches: [] }; body[PG.tab] = ids; const r = await api('/api/admin/actions/delete', 'POST', body); toast(`✅ Deleted: runs ${r.runs}, artifacts ${r.artifacts}, caches ${r.caches}, branches ${r.branches}`); load(); });
+    };
+    $('#accsel').onchange = (e) => { PG.acc = e.target.value; load(); };
+    const sweep = (acc) => guard(async () => { if (!confirm(acc === 'all' ? 'Delete finished runs, artifacts, caches and old branches on ALL accounts? (running builds are kept)' : 'Clean this account? (running builds are kept)')) return; const r = await api('/api/admin/cleanup', 'POST', { account: acc === 'all' ? 'all' : PG.acc }); toast(`✅ Deleted: runs ${r.runs}, artifacts ${r.artifacts}, caches ${r.caches}, branches ${r.branches}`); load(); });
+    $('#ac_sweep').onclick = sweep('one'); $('#ac_all').onclick = sweep('all'); await load();
+  },
+
+  async settings() {
+    const s = await api('/api/admin/settings'), b = s.build;
+    const trow = (k, l, d) => `<div class="frow"><div class="t"><b>${l}</b><span>${d}</span></div><input type="text" id="b_task${k}" value="${esc(b['task' + k])}" title="Gradle task">${sw('b_allow' + k, b['allow' + k])}</div>`;
+    $('#content').innerHTML = header('Settings', 'Build configuration, build types, routing and limits') + `<div class="grid g2" style="margin-bottom:0">
+      <div class="panel"><div class="hd"><h3>Build types</h3></div><div class="bd" style="padding-top:6px">${trow('Debug', 'Debug APK', 'Fast test build — signed with the debug key')}${trow('Release', 'Release APK', 'Installable signed APK')}${trow('Bundle', 'Release Bundle (AAB)', 'For Play Console uploads')}<div class="hint" style="margin-top:8px">Turn a switch off to stop users from building that type. The box on the right is the Gradle task.</div></div></div>
+      <div class="panel"><div class="hd"><h3>Toolchain</h3></div><div class="bd"><div class="fg">${field('b_jdk', 'JDK version', b.jdk)}${field('b_gradle', 'Gradle (if no wrapper)', b.gradle)}${field('b_timeoutMin', 'Timeout (minutes)', b.timeoutMin, 'number')}${field('b_retentionDays', 'Artifact retention (days)', b.retentionDays, 'number', 'On GitHub — removed after the server has saved the output')}</div></div></div>
+      <div class="panel"><div class="hd"><h3>Routing &amp; limits</h3></div><div class="bd"><div class="fg">${field('b_maxConcurrent', 'Max concurrent per account', b.maxConcurrent, 'number')}${field('b_estMinutes', 'Estimated minutes per build', b.estMinutes, 'number', 'Used by the router')}${field('b_maxPerUserPerDay', 'Builds per user per day', b.maxPerUserPerDay, 'number')}${field('b_maxZipMB', 'Max source zip (MB)', b.maxZipMB, 'number')}</div></div></div>
+      <div class="panel"><div class="hd"><h3>Storage</h3></div><div class="bd"><div class="fg">${field('b_keepBuildDays', 'Keep builds on the server (days)', b.keepBuildDays, 'number')}${field('b_storageLimitMB', 'Actions storage limit (MB)', b.storageLimitMB, 'number', 'Display only')}</div></div></div></div>
+      <div class="savebar"><button class="p" id="sv">Save changes</button><span class="mu">When the build configuration changes, the workflow is re-synced to every account on the next build.</span></div>`;
+    $('#sv').onclick = guard(async () => { const build = {}; $$('[id^=b_]').forEach((i) => build[i.id.slice(2)] = i.type === 'checkbox' ? i.checked : i.value); await api('/api/admin/settings', 'PUT', { build }); toast('✅ Settings saved'); });
+  },
+
+  async secrets() {
+    await refreshData(); if (!DATA.accs.length) { $('#content').innerHTML = header('Secrets', '') + noAccBox(); return; }
+    PG.acc ||= DATA.accs[0].id; const list = await api('/api/admin/secrets?account=' + PG.acc);
+    $('#content').innerHTML = header('Secrets', 'GitHub Actions secrets (fallback) — a project’s own keystore is always used first', `<select id="accsel" style="width:auto">${DATA.accs.map((a) => `<option value="${a.id}" ${a.id === PG.acc ? 'selected' : ''}>${esc(a.label)} (@${esc(a.login)})</option>`).join('')}</select>`) +
+      `<div class="grid g2"><div class="panel"><div class="hd"><h3>Existing secrets</h3></div><div class="bd np">${list.length ? `<table class="tbl"><tbody>${list.map((s) => `<tr><td>🔑 <b>${esc(s.name)}</b></td><td class="mu">${s.updated_at ? new Date(s.updated_at).toLocaleDateString() : ''}</td><td style="text-align:right"><button class="d xs" data-n="${esc(s.name)}">Delete</button></td></tr>`).join('')}</tbody></table>` : emptyBox('🔑', 'No secrets')}</div></div>
+      <div><div class="panel"><div class="hd"><h3>Add / update secret</h3></div><div class="bd">${field('sn', 'Name', '', 'text', 'KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD')}<label>Value</label><textarea id="sv" rows="3" style="width:100%"></textarea><div class="row"><label style="display:flex;gap:8px;align-items:center;margin:8px 0;color:var(--text)"><input type="checkbox" id="sall"> Set on all accounts</label></div><button class="p" id="ss">Set secret</button></div></div>
+      <div class="panel"><div class="hd"><h3>Upload fallback keystore</h3></div><div class="bd"><input type="file" id="ks" style="width:100%"><div class="hint">A .jks/.keystore file is stored as KEYSTORE_BASE64. Fallback only.</div></div></div></div></div>`;
+    const target = () => $('#sall').checked ? 'all' : PG.acc;
+    $('#accsel').onchange = (e) => { PG.acc = e.target.value; PAGES.secrets(); };
+    $('#ss').onclick = guard(async () => { const r = await api('/api/admin/secrets', 'PUT', { account: target(), name: val('sn').trim(), value: val('sv') }); toast(`✅ Set on ${r.accounts} account(s)`); PAGES.secrets(); });
+    $$('[data-n]').forEach((b) => b.onclick = guard(async () => { if (confirm(`Delete ${b.dataset.n}?`)) { await api(`/api/admin/secrets/${b.dataset.n}?account=${PG.acc}`, 'DELETE'); PAGES.secrets(); } }));
+    $('#ks').onchange = guard(async (e) => { const f = e.target.files[0]; if (!f) return; await api('/api/admin/secrets', 'PUT', { account: target(), name: 'KEYSTORE_BASE64', value: await b64(f) }); toast('✅ KEYSTORE_BASE64 set'); PAGES.secrets(); });
+  },
+};
+
+// ---------------- shared builders ----------------
+function buildsTable(rows) {
+  if (!rows.length) return emptyBox('🛠️', 'No builds yet', 'Builds started from the IDE appear here');
+  return `<table class="tbl"><thead><tr><th>Build</th><th>User / Project</th><th>Type</th><th>Status</th><th>Signing</th><th>GitHub</th><th>Time</th></tr></thead><tbody>${rows.map((b) => `<tr class="click" data-b="${b.id}"><td><b>#${b.id}</b>${b.message ? `<div class="mu" style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.message)}</div>` : ''}</td><td><div class="row" style="margin:0"><div class="avatar sm">${initials(b.ownerName)}</div><div><b>${esc(b.ownerName)}</b><div class="mu">${esc(b.project)}</div></div></div></td><td><span class="tag">${esc(b.type || 'release')}</span></td><td>${sbadge(b)}</td><td>${SIGN[b.signing] ? `<span class="tag ${SIGN[b.signing][1]}">${SIGN[b.signing][0]}</span>` : ''}</td><td>${b.accountLabel ? `<span class="mu">🐙 ${esc(b.accountLabel)}</span>` : '<span class="mu">—</span>'}</td><td class="mu">${ago(b.createdAt)}<div>${fmtDur(elapsed(b))}</div></td></tr>`).join('')}</tbody></table>`;
+}
+const bindRows = () => $$('tr[data-b]').forEach((r) => r.onclick = () => openDrawer(r.dataset.b));
+
+function connectModal() {
+  const m = modal(`<h3>Connect GitHub account</h3><div class="fg" style="grid-template-columns:1fr 1fr">${field('ac_label', 'Name', '', 'text', 'e.g. Alice')}${field('ac_repo', 'Repository name (optional)', '', 'text', 'Empty = android-builder-xxxxxx')}</div>${field('ac_token', 'Personal Access Token', '', 'password', 'Classic token with <b>repo</b> + <b>workflow</b> scopes (add delete_repo to allow deleting the repo later)')}<div class="fg" style="grid-template-columns:1fr 1fr">${field('ac_limit', 'Monthly limit (minutes)', 2000, 'number', 'Free: 2000 · Pro: 3000')}${field('ac_conc', 'Max concurrent builds', 2, 'number')}</div>
+    <div class="card" style="margin-top:12px;background:var(--panel2)">✔ The token is verified &nbsp; ✔ A <b>private</b> repo is created automatically (a public one is made private) &nbsp; ✔ The workflow is pushed</div><div id="mst" class="mu"></div><div class="foot"><button class="s" id="mc">Cancel</button><button class="p" id="mk">Connect &amp; create private repo</button></div>`);
+  m.$('#mc').onclick = m.close;
+  m.$('#mk').onclick = guard(async () => { m.$('#mk').disabled = true; m.$('#mst').innerHTML = '<span class="spin"></span> Verifying, creating the repo and pushing the workflow…';
+    try { const r = await api('/api/admin/accounts', 'POST', { label: m.$('#ac_label').value, token: m.$('#ac_token').value, repo: m.$('#ac_repo').value, limitMinutes: m.$('#ac_limit').value, maxConcurrent: m.$('#ac_conc').value }); m.close(); toast(`✅ ${r.login} connected — ${r.repoCreated ? 'new private repo created' : 'repo made private'}`); await refreshData(); if (page === 'accounts') PAGES.accounts(); else route(); }
+    catch (e) { m.$('#mk').disabled = false; m.$('#mst').innerHTML = `<span class="er">❌ ${esc(e.message)}</span>`; } });
+}
+
+// ---------------- boot ----------------
+requireLogin('admin', async () => {
+  BuildStore.start(); await refreshData().catch(() => {}); setInterval(() => refreshData().catch(() => {}), 30000);
+  await route(); window.addEventListener('themechange', drawNav);
+}, 'Admin Console');
+</script></body></html>

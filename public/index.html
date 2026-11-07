@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Android Builder</title>
+<link rel="stylesheet" href="/common.css"><link rel="stylesheet" href="/studio.css"></head>
+<body class="studio">
+<div id="menubar"></div>
+<div id="toolbar"></div>
+<div id="mainrow">
+  <div class="strip" id="lstrip"><button id="sb-proj" class="on">Project</button><button id="sb-sign">Signing</button></div>
+  <div id="pw">
+    <div class="tw-h"><b><select id="viewsel"><option value="android">Android</option><option value="project">Project</option></select></b>
+      <button class="ib" id="t-loc" title="Select Opened File"></button><button class="ib" id="t-col" title="Collapse All"></button><button class="ib" id="t-add" title="New File (Alt+Insert)"></button></div>
+    <div id="tree" tabindex="0"></div>
+  </div>
+  <div class="split-v" id="sv"></div>
+  <div id="center"><div id="ed"></div><div class="split-h" id="sh"></div>
+    <div id="bottom"><div class="bt-h" id="bth"></div><div id="bbody"></div></div></div>
+</div>
+<div id="statusbar"></div>
+<div id="welcome"></div>
+<div id="toast"></div>
+<script src="/common.js"></script><script src="/editor.js"></script><script src="/tree.js"></script><script src="/keymap.js"></script><script src="/ide.js"></script>
+</body></html>
